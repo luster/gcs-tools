@@ -3,7 +3,9 @@ import ReleaseTransformations._
 organization := "com.spotify.data"
 name := "gcs-tools"
 
-val gcsVersion = "hadoop3-2.1.9"
+ThisBuild / resolvers += Resolver.mavenLocal
+
+val gcsVersion = "3.0.0-SNAPSHOT"
 val guavaVersion = "31.1-jre" // otherwise android is taken
 val hadoopVersion = "3.3.4"
 val joptVersion = "5.0.4"
@@ -16,7 +18,6 @@ val commonsLangVersion = "2.6"
 
 val commonSettings = assemblySettings ++ Seq(
   scalaVersion := "2.13.10",
-  autoScalaLibrary := false,
   javacOptions ++= Seq("--release", "8")
 )
 
@@ -38,84 +39,81 @@ lazy val root = project
     )
   )
   .aggregate(
-    avroTools,
-    parquetCli,
-    protoTools,
-    magnolifyTools
+    `avro-tools`,
+    `parquet-cli`,
+    `proto-tools`,
+    `magnolify-tools`
   )
 
 lazy val shared = project
   .in(file("shared"))
   .settings(commonSettings)
+  .settings(
+    autoScalaLibrary := false,
+    libraryDependencies ++= Seq(
+      // wait 3.0.0 to be released. Depend on unmanaged 3.0.0-SNAPSHOT
+      // "com.google.cloud.bigdataoss" % "gcs-connector" % gcsVersion,
+      "org.apache.hadoop" % "hadoop-client" % hadoopVersion,
+      "org.apache.hadoop" % "hadoop-common" % hadoopVersion
+    )
+  )
 
-lazy val avroTools = project
+lazy val `avro-tools` = project
   .in(file("avro-tools"))
+  .dependsOn(shared)
   .settings(commonSettings)
   .settings(
+    autoScalaLibrary := false,
     assembly / mainClass := Some("org.apache.avro.tool.Main"),
     assembly / assemblyJarName := s"avro-tools-$avroVersion.jar",
     libraryDependencies ++= Seq(
-      "org.apache.avro" % "avro-tools" % avroVersion,
-      "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
-      "org.apache.hadoop" % "hadoop-client" % hadoopVersion,
-      "com.google.cloud.bigdataoss" % "gcs-connector" % gcsVersion
+      "org.apache.avro" % "avro-tools" % avroVersion
     )
   )
-  .dependsOn(shared)
 
-lazy val parquetCli = project
+lazy val `parquet-cli` = project
   .in(file("parquet-cli"))
+  .dependsOn(shared)
   .settings(commonSettings)
   .settings(
+    autoScalaLibrary := false,
     assembly / mainClass := Some("org.apache.parquet.cli.Main"),
     assembly / assemblyJarName := s"parquet-cli-$parquetVersion.jar",
     libraryDependencies ++= Seq(
-      "org.apache.parquet" % "parquet-cli" % parquetVersion,
-      "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
-      "org.apache.hadoop" % "hadoop-client" % hadoopVersion,
-      "com.google.cloud.bigdataoss" % "gcs-connector" % gcsVersion
+      "org.apache.parquet" % "parquet-cli" % parquetVersion
     )
   )
-  .dependsOn(shared)
 
-lazy val protoTools = project
+lazy val `proto-tools` = project
   .in(file("proto-tools"))
+  .dependsOn(shared)
   .settings(commonSettings)
   .settings(
     assembly / mainClass := Some("org.apache.avro.tool.ProtoMain"),
     assembly / assemblyJarName := s"proto-tools-$protobufVersion.jar",
     libraryDependencies ++= Seq(
+      "com.google.protobuf" % "protobuf-java" % protobufVersion,
       "me.lyh" %% "protobuf-generic" % protobufGenericVersion,
       "net.sf.jopt-simple" % "jopt-simple" % joptVersion,
-      "com.google.protobuf" % "protobuf-java" % protobufVersion,
       "org.apache.avro" % "avro-mapred" % avroVersion,
-      "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
-      "org.apache.hadoop" % "hadoop-client" % hadoopVersion,
-      "com.google.cloud.bigdataoss" % "gcs-connector" % gcsVersion
     )
   )
-  .dependsOn(shared)
 
-lazy val magnolifyTools = project
+lazy val `magnolify-tools` = project
   .in(file("magnolify-tools"))
+  .dependsOn(shared)
   .settings(commonSettings)
   .settings(
     assembly / mainClass := Some("magnolify.tools.Main"),
     assembly / assemblyJarName := s"magnolify-tools-$magnolifyVersion.jar",
     libraryDependencies ++= Seq(
+      "com.spotify" %% "magnolify-tools" % magnolifyVersion,
       "net.sf.jopt-simple" % "jopt-simple" % joptVersion,
       "org.apache.avro" % "avro" % avroVersion,
       "org.apache.parquet" % "parquet-hadoop" % parquetVersion,
-      "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
-      "org.apache.hadoop" % "hadoop-client" % hadoopVersion,
-      "com.google.cloud.bigdataoss" % "gcs-connector" % gcsVersion,
-      "com.spotify" %% "magnolify-tools" % magnolifyVersion
-    ),
-    dependencyOverrides ++= Seq(
-      "com.google.guava" % "guava" % "29.0-jre"
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value
     )
   )
-  .dependsOn(shared)
 
 def exclude(moduleNames: String*)(
     dependencies: Vector[Assembly.Dependency]
